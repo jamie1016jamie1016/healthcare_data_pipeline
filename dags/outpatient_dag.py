@@ -8,6 +8,8 @@ from datetime import datetime, timedelta
 import io
 import zipfile
 import pandas as pd
+from airflow.models import Connection
+from airflow import settings
 
 
 # Define variables output
@@ -36,10 +38,31 @@ def process_zip_data(ti, output_dir, delimiter):
             if file_name.endswith('.csv'):  # Process only CSV files
                 with zip_file.open(file_name) as csv_file:
                     # Read the CSV file into a DataFrame
-                    df = pd.read_csv(csv_file)
-                    df.to_csv("/opt/airflow/dags/123.csv", index=False, sep=delimiter)
+                    df = pd.read_csv(csv_file, sep=delimiter)
+                    output_file_path = f"{output_dir}/processed_{file_name}"
+                    df.to_csv(output_file_path, index=False)
                     
+def create_http_connection():
+    """Creates the HTTP connection programmatically in Airflow."""
+    conn_id = "cms_data"
+    session = settings.Session()  # Initialize session here
+    existing_conn = session.query(Connection).filter(Connection.conn_id == conn_id).first()
 
+    if not existing_conn:
+        new_conn = Connection(
+            conn_id=conn_id,
+            conn_type="http",
+            host="https://data.cms.gov",
+        )
+        session.add(new_conn)
+        session.commit()
+        session.close()
+        print(f"Connection {conn_id} created.")
+    else:
+        print(f"Connection {conn_id} already exists.")
+        session.close()
+
+create_http_connection()
 
 with DAG(
     "data_pipeline_dag",
