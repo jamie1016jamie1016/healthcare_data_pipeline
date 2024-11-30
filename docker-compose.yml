@@ -6,6 +6,8 @@ services:
       - POSTGRES_USER=airflow
       - POSTGRES_PASSWORD=airflow
       - POSTGRES_DB=airflow
+    ports:
+      - "5432:5432"
 
   airflow-init:
     image: apache/airflow:2.10.3
@@ -33,6 +35,7 @@ services:
     volumes:
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/dags:/opt/airflow/dags
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/logs:/opt/airflow/logs
+      - /Users/jamie/Documents/my_code/cms_health_data_pipeline/scripts:/opt/airflow/scripts 
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 10s
@@ -50,3 +53,4 @@ services:
     volumes:
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/dags:/opt/airflow/dags
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/logs:/opt/airflow/logs
+      - /Users/jamie/Documents/my_code/cms_health_data_pipeline/scripts:/opt/airflow/scripts 
