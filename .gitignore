@@ -1,7 +1,5 @@
 logs
 dags/__pycache__
 dags/processed_outpatient.csv
-Untitled-1.ipynb
 scripts/db_connection.py
 scripts/__pycache__
-/Users/jamie/Documents/my_code/cms_health_data_pipeline/Untitled-1.ipynb
