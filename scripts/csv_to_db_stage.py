@@ -1,17 +1,19 @@
 import pandas as pd
 import psycopg2
 from psycopg2 import sql
-from db_connection import DB_HOST, DB_PORT, DB_NAME, DB_USER, DB_PASSWORD, CSV_FILE, TABLE_NAME
+import os
+from sqlalchemy.engine.url import make_url
+import traceback  # Import traceback for detailed error logging
 
-
-# Database connection details
-DB_HOST = DB_HOST
-DB_PORT = DB_PORT
-DB_NAME = DB_NAME
-DB_USER = DB_USER
-DB_PASSWORD = DB_PASSWORD
-CSV_FILE = CSV_FILE
-TABLE_NAME = TABLE_NAME
+# Extract DB connection details from the environment variable
+db_url = make_url(os.environ.get('AIRFLOW__EXTRA__DB_CONN'))
+DB_HOST = db_url.host
+DB_PORT = db_url.port
+DB_NAME = db_url.database
+DB_USER = db_url.username
+DB_PASSWORD = db_url.password
+CSV_FILE = "dags/processed_outpatient.csv"
+TABLE_NAME = "staging_table"
 
 # Step 1: Load the CSV file into a DataFrame
 df = pd.read_csv(CSV_FILE, low_memory=False)
@@ -70,7 +72,11 @@ try:
         print(f"Inserted rows {i} to {i + len(batch)}.")
     
 except Exception as e:
-    print(f"Error: {e}")
+    print(f"Error occurred: {e}")
+    print("Detailed traceback:")
+    print(traceback.format_exc())  # Print the full traceback for debugging
 finally:
-    cursor.close()
-    conn.close()
+    if 'cursor' in locals() and cursor is not None:
+        cursor.close()
+    if 'conn' in locals() and conn is not None:
+        conn.close()

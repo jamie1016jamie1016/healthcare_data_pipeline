@@ -11,6 +11,7 @@ import pandas as pd
 from airflow.models import Connection
 from airflow import settings
 import subprocess
+import os
 
 
 # Define variables output
@@ -43,16 +44,24 @@ def process_zip_data(ti, output_dir, delimiter):
                     output_file_path = f"{output_dir}/processed_{file_name}"
                     df.to_csv(output_file_path, index=False)
 
+
+
 def run_csv_to_db_script():
     """Run the CSV to DB script."""
     try:
-        subprocess.run(
+        result = subprocess.run(
             ["python3", "/opt/airflow/scripts/csv_to_db_stage.py"],
             check=True,
+            capture_output=True,  # Capture standard output and error
+            text=True,            # Decode output to string
+            env=os.environ.copy(),  # Pass the environment variables
         )
-        print("CSV to DB script executed successfully.")
+        print("CSV to DB script output:", result.stdout)
     except subprocess.CalledProcessError as e:
-        print(f"Error running CSV to DB script: {e}")
+        print("CSV to DB script failed:", e.stderr)
+        raise RuntimeError(f"CSV to DB script failed with error: {e.stderr}")
+
+
 
 def create_http_connection():
     """Creates the HTTP connection programmatically in Airflow."""
@@ -109,3 +118,5 @@ with DAG(
         )
 
     download_zip_file >> process_and_save_csv >> insert_into_db
+
+    
