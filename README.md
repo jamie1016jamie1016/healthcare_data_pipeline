@@ -1,7 +1,4 @@
-
-# README
-
-## **CMS Healthcare Data Pipeline**
+# **CMS Healthcare Data Pipeline**
 
 This project demonstrates an end-to-end data pipeline using **Apache Airflow** and **Docker**. The pipeline automates the process of downloading, extracting, transforming, loading, and saving healthcare-related data from the public CMS (Centers for Medicare & Medicaid Services) website.
 
