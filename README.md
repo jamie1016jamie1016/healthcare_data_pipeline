@@ -43,7 +43,6 @@ The pipeline is fully automated via Airflow tasks defined in the DAG (`outpatien
 cms_health_data_pipeline/
 ├── dags/
 │   ├── outpatient_dag.py       # Airflow DAG definition for the ETL pipeline
-│   ├── csv_to_db_stage.py      # Script for loading CSV data into PostgreSQL
 ├── logs/                       # Directory for Airflow logs
 ├── scripts/
 │   ├── csv_to_db_stage.py      # Script for loading CSV data into PostgreSQL
