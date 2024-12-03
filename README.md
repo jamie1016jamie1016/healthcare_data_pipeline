@@ -104,6 +104,7 @@ This will:
 - Mount your `dags`, `logs`, and `scripts` folders for development and monitoring.
 
 > The Airflow webserver will be accessible at **http://localhost:8080**.  
+
 > Login credentials: `admin/admin`.
 > Trigger the DAG (`outpatient_dag.py`) manually as this process only need to run once.
 
