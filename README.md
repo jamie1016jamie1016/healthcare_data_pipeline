@@ -45,8 +45,9 @@ cms_health_data_pipeline/
 │   ├── outpatient_dag.py       # Airflow DAG definition for the ETL pipeline
 │   ├── csv_to_db_stage.py      # Script for loading CSV data into PostgreSQL
 ├── logs/                       # Directory for Airflow logs
+├── scripts/
+│   ├── csv_to_db_stage.py      # Script for loading CSV data into PostgreSQL
 ├── docker-compose.yml          # Docker Compose file to deploy Airflow and Postgres
-├── requirements.txt            # Python dependencies for Airflow and DAGs
 ├── README.md                   # Project documentation
 ```
 
@@ -91,13 +92,8 @@ Ensure that Docker is installed on your machine. Verify the installation by runn
 docker --version
 ```
 
-### **3. Install Python Dependencies**
-If using custom Python scripts, ensure the dependencies listed in `requirements.txt` are installed:
-```bash
-pip install -r requirements.txt
-```
-
-### **4. Start Docker Services**
+### **3. Start Docker Services**
+Ensure to change my path to your path in docker-compose.yml file 
 Run the following command to start the containers:
 ```bash
 docker-compose up
@@ -110,6 +106,7 @@ This will:
 
 > The Airflow webserver will be accessible at **http://localhost:8080**.  
 > Login credentials: `admin/admin`.
+> Trigger the DAG (`outpatient_dag.py`) manually as this process only need to run once.
 
 ---
 

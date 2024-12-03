@@ -32,6 +32,8 @@ services:
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      # change the below line to your host machine's IP address, username and password
+      # AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://YOUR_USERNAME:YOUR_PASSWARD@host.docker.internal:5432/cms_staging_db
       - AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://postgres:asd456@host.docker.internal:5432/cms_staging_db
       - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOofyDDAmhZ37Si56s9PJVMBlAZJABtig=
     ports:
@@ -41,6 +43,7 @@ services:
       postgres:
         condition: service_healthy
     volumes:
+    # change the below line to your local machine's path
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/dags:/opt/airflow/dags
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/logs:/opt/airflow/logs
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/scripts:/opt/airflow/scripts 
@@ -54,6 +57,8 @@ services:
     image: apache/airflow:2.10.3
     environment:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
+      # change the below line to your host machine's IP address, username and password
+      # AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://YOUR_USERNAME:YOUR_PASSWARD@host.docker.internal:5432/cms_staging_db
       - AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://postgres:asd456@host.docker.internal:5432/cms_staging_db
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
@@ -63,6 +68,7 @@ services:
       airflow-webserver:
         condition: service_healthy
     volumes:
+      # change the below line to your local machine's path
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/dags:/opt/airflow/dags
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/logs:/opt/airflow/logs
       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/scripts:/opt/airflow/scripts
