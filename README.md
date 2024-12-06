@@ -161,9 +161,10 @@ The DAG (`outpatient_dag.py`) defines the ETL pipeline with the following tasks:
 ---
 
 ## **References**
-- CMS Outpatient Data: [https://data.cms.gov](https://data.cms.gov)
-- Airflow Documentation: [https://airflow.apache.org](https://airflow.apache.org)
-- Docker Documentation: [https://docs.docker.com](https://docs.docker.com)
+- [CMS Outpatient Data](https://data.cms.gov)
+- [Data Used in this Project](https://data.cms.gov/collection/synthetic-medicare-enrollment-fee-for-service-claims-and-prescription-drug-event)
+- [Airflow Documentation](https://airflow.apache.org)
+- [Docker Documentation](https://docs.docker.com)
 
 ---
 
