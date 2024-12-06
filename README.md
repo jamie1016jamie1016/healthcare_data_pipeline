@@ -173,6 +173,7 @@ This project is inspired by the work of [Seattle Data Guy](https://www.youtube.c
 In addition to the adapted components, I expanded the project by containerizing all components in Docker and adding a custom Python script for inserting data into a local database. These enhancements were designed to make the pipeline fully self-contained and extend its functionality for local development and analysis.
 
 I would like to thank [Seattle Data Guy](https://www.youtube.com/@SeattleDataGuy) for his detailed explanation and valuable code contributions, which served as a foundation for this project.
+
 ---
 
 This pipeline provides a scalable, reusable, and automated solution for ETL workflows using healthcare datasets, demonstrating the power of Apache Airflow and Docker in modern data engineering.
