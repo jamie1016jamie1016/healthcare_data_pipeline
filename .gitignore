@@ -1,6 +1,7 @@
 logs
 dags/__pycache__
-dags/processed_outpatient.csv
+dags/123processed_outpatient.csv
 scripts/db_connection.py
 scripts/__pycache__
 Untitled-1.ipynb
+.env
