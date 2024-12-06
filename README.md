@@ -160,12 +160,19 @@ The DAG (`outpatient_dag.py`) defines the ETL pipeline with the following tasks:
 
 ---
 
-## **References**
+## **References and Acknowledgments**
 - [CMS Outpatient Data](https://data.cms.gov)
 - [Data Used in this Project](https://data.cms.gov/collection/synthetic-medicare-enrollment-fee-for-service-claims-and-prescription-drug-event)
 - [Airflow Documentation](https://airflow.apache.org)
 - [Docker Documentation](https://docs.docker.com)
 
+This project is inspired by the work of [Seattle Data Guy](https://www.youtube.com/@SeattleDataGuy). A significant portion of the code and concepts, including the Airflow DAG and Docker Compose setup, were adapted from his Gist.
+
+- Gist: [View his Gist](https://gist.github.com/sdg-1)
+
+In addition to the adapted components, I expanded the project by containerizing all components in Docker and adding a custom Python script for inserting data into a local database. These enhancements were designed to make the pipeline fully self-contained and extend its functionality for local development and analysis.
+
+I would like to thank [Seattle Data Guy](https://www.youtube.com/@SeattleDataGuy) for his detailed explanation and valuable code contributions, which served as a foundation for this project.
 ---
 
 This pipeline provides a scalable, reusable, and automated solution for ETL workflows using healthcare datasets, demonstrating the power of Apache Airflow and Docker in modern data engineering.
