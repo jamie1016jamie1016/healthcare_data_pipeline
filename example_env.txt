@@ -1,0 +1,20 @@
+#Create a folder ".env"
+
+# PostgreSQL Configuration
+POSTGRES_USER=airflow
+POSTGRES_PASSWORD=airflow
+POSTGRES_DB=airflow
+
+# Airflow Configuration
+FERNET_KEY=<YOUR_FRENET_KEY>
+AIRFLOW_ADMIN_USER=admin
+AIRFLOW_ADMIN_PASSWORD=admin
+AIRFLOW_ADMIN_EMAIL=admin@example.com
+
+# Additional Database Connection
+EXTRA_DB_CONN=postgresql+psycopg2://<YOUR_USERNAMER>:<YOUR_PASSWORD>@host.docker.internal:5432/<YOUR_DATABASE_NAME>
+
+AIRFLOW_OUTPUT_DIR = "/opt/airflow/dags"
+CSV_DELIMITER = "|"
+CSV_FILE_PATH = "/opt/airflow/dags/processed_outpatient.csv"
+TABLE_NAME = "staging_table"

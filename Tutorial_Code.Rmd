@@ -1,0 +1,352 @@
+---
+title: "Tutorial Code"
+author: "Jamie Yan"
+output: pdf_document
+---
+
+# Introduction
+
+This tutorial explains how to set up an Apache Airflow data pipeline using Docker, define a DAG to process and load data, and write a Python script to handle the database operations. The tutorial includes detailed explanations and code snippets.
+
+------------------------------------------------------------------------
+
+# Section 1: Docker Compose Setup
+
+To set up your environment, create a `docker-compose.yml` file with the following configuration. Replace placeholders like `<YOUR_POSTGRES_USER>` and `<YOUR_POSTGRES_PASSWORD>` with your credentials.
+
+``` yaml
+version: '3.9'
+services:
+  postgres:
+    image: postgres:13
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow-init:
+    image: apache/airflow:2.10.3
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+    entrypoint: "bash -c 'airflow db init && airflow users create --username ${AIRFLOW_ADMIN_USER} --password ${AIRFLOW_ADMIN_PASSWORD} --firstname Admin --lastname Admin --role Admin --email ${AIRFLOW_ADMIN_EMAIL}'"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    env_file: 
+      - .env
+
+  airflow-webserver:
+    image: apache/airflow:2.10.3
+    environment:
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+      - AIRFLOW__EXTRA__DB_CONN=${EXTRA_DB_CONN}
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+      - AIRFLOW_OUTPUT_DIR=${AIRFLOW_OUTPUT_DIR}
+      - CSV_DELIMITER=${CSV_DELIMITER}
+    env_file: 
+      - .env
+    ports:
+      - "8080:8080"
+    command: "airflow webserver"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  airflow-scheduler:
+    image: apache/airflow:2.10.3
+    env_file: 
+      - .env
+    environment:
+      - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
+      - AIRFLOW__EXTRA__DB_CONN=${EXTRA_DB_CONN}
+      - AIRFLOW__CORE__LOAD_EXAMPLES=False
+      - AIRFLOW__CORE__EXECUTOR=LocalExecutor
+      - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+    command: "airflow scheduler"
+    depends_on:
+      airflow-webserver:
+        condition: service_healthy
+    volumes:
+      - ./dags:/opt/airflow/dags
+      - ./logs:/opt/airflow/logs
+      - ./scripts:/opt/airflow/scripts
+```
+
+------------------------------------------------------------------------
+
+# Section 2: Define the Airflow DAG
+
+The DAG (`data_pipeline.py`) defines the workflow for downloading, processing, and inserting data. Replace placeholders with your paths and endpoint details.
+
+``` python
+
+from airflow import DAG
+from airflow.providers.http.operators.http import HttpOperator
+from airflow.operators.python import PythonOperator
+import base64
+from datetime import datetime, timedelta
+import io
+import zipfile
+import pandas as pd
+from airflow.models import Connection
+from airflow import settings
+import subprocess
+import os
+
+# Define variables from environment variables or fallback defaults
+OUTPUT_DIR = os.getenv("AIRFLOW_OUTPUT_DIR")  # Directory for processed files
+DELIMITER = os.getenv("CSV_DELIMITER")  # Delimiter for CSV files
+
+default_args = {
+    "owner": "airflow",  # Owner of the DAG
+    "retries": 1,  # Number of retries in case of failure
+    "retry_delay": timedelta(minutes=5),  # Delay between retries
+}
+
+def process_zip_data(ti, output_dir, delimiter):
+    """
+    Process zip data: extract the first CSV, rename, and save with a specific delimiter.
+    Parameters:
+        - ti: Task Instance to pull data from XCom.
+        - output_dir: Directory to save the processed file.
+        - delimiter: Delimiter for the CSV file.
+    """
+    # Retrieve the base64 encoded ZIP content from XCom
+    encoded_content = ti.xcom_pull(task_ids="download_zip_file")
+    
+    # Decode base64 to binary data
+    zip_content = base64.b64decode(encoded_content)
+    
+    # Wrap the bytes in a BytesIO object for file-like operations
+    zip_content_io = io.BytesIO(zip_content)
+    with zipfile.ZipFile(zip_content_io, 'r') as zip_file:
+        for file_name in zip_file.namelist():
+            if file_name.endswith('.csv'):  # Process only CSV files
+                with zip_file.open(file_name) as csv_file:
+                    # Read the CSV file into a DataFrame
+                    df = pd.read_csv(csv_file, sep=delimiter)  # Initial delimiter assumed as ','
+                    # Save the file with the specified delimiter
+                    output_file_path = os.path.join(output_dir, f"processed_{file_name}")
+                    df.to_csv(output_file_path, index=False, sep=',')
+                    print(f"Processed file saved to {output_file_path}")
+
+def run_csv_to_db_script():
+    """
+    Run the CSV-to-DB script to insert processed data into the database.
+    """
+    try:
+        # Run the external script
+        result = subprocess.run(
+            ["python3", "/opt/airflow/scripts/csv_to_db_stage.py"],  # Path to the script
+            check=True,
+            capture_output=True,  # Capture stdout and stderr
+            text=True,  # Decode output as string
+            env=os.environ.copy(),  # Pass environment variables
+        )
+        print("CSV to DB script output:", result.stdout)
+    except subprocess.CalledProcessError as e:
+        print("CSV to DB script failed:", e.stderr)
+        raise RuntimeError(f"CSV to DB script failed with error: {e.stderr}")
+
+def create_http_connection():
+    """
+    Programmatically create an HTTP connection in Airflow.
+    """
+    conn_id = "cms_data"
+    session = settings.Session()  # Initialize a session
+    existing_conn = session.query(Connection).filter(Connection.conn_id == conn_id).first()
+
+    if not existing_conn:
+        new_conn = Connection(
+            conn_id=conn_id,
+            conn_type="http",
+            host="https://data.cms.gov",  # Endpoint for the CMS data
+        )
+        session.add(new_conn)
+        session.commit()
+        print(f"Connection {conn_id} created.")
+    else:
+        print(f"Connection {conn_id} already exists.")
+    session.close()
+
+# Create the HTTP connection if it doesn't exist
+create_http_connection()
+
+# Define the DAG
+with DAG(
+    "data_pipeline_dag",
+    default_args=default_args,
+    description="A data pipeline that downloads a ZIP file, extracts CSV, and saves to files",
+    schedule_interval=None,  # No scheduled runs; triggered manually
+    start_date=datetime(2024, 11, 11),  # Start date for the DAG
+    catchup=False,  # Do not backfill previous runs
+) as dag:
+
+    # Task 1: Download ZIP file from the HTTP endpoint
+    download_zip_file = HttpOperator(
+        task_id="download_zip_file",
+        method="GET",  # HTTP GET method
+        http_conn_id="cms_data",  # Connection ID created programmatically
+        endpoint="/sites/default/files/2023-04/c3d8a962-c6b8-4a59-adb5-f0495cc81fda/Outpatient.zip",
+        response_filter=lambda response: base64.b64encode(response.content).decode("utf-8"),
+        log_response=True,
+        do_xcom_push=True,  # Push response data to XCom for downstream tasks
+    )
+
+    # Task 2: Process and save CSV from the downloaded ZIP file
+    process_and_save_csv = PythonOperator(
+        task_id="process_and_save_csv",
+        python_callable=process_zip_data,
+        op_kwargs={
+            "output_dir": OUTPUT_DIR,
+            "delimiter": DELIMITER,
+        },
+    )
+
+    # Task 3: Run the script to insert CSV data into the database
+    insert_into_db = PythonOperator(
+        task_id="insert_into_db",
+        python_callable=run_csv_to_db_script,
+    )
+
+    # Define task dependencies
+    download_zip_file >> process_and_save_csv >> insert_into_db
+```
+
+------------------------------------------------------------------------
+
+# Section 3: Database Script
+
+This script loads processed CSV data into a PostgreSQL database. Replace database connection details with your own.
+
+``` python
+import pandas as pd
+import psycopg2
+from psycopg2 import sql
+import os
+from sqlalchemy.engine.url import make_url
+import traceback  # Import traceback for detailed error logging
+
+# Extract database connection details from environment variables
+db_url = make_url(os.environ.get('AIRFLOW__EXTRA__DB_CONN'))  # Connection string from environment
+DB_HOST = db_url.host
+DB_PORT = db_url.port
+DB_NAME = db_url.database
+DB_USER = db_url.username
+DB_PASSWORD = db_url.password
+
+# Define the path to the CSV file (can be customized via environment variable)
+CSV_FILE = os.getenv("CSV_FILE_PATH")
+
+# Define the table name for staging the data
+TABLE_NAME = os.getenv("TABLE_NAME")
+
+# Step 1: Load the CSV file into a pandas DataFrame
+try:
+    print(f"Loading data from CSV file: {CSV_FILE}")
+    df = pd.read_csv(CSV_FILE, low_memory=False)
+    print(f"Loaded {len(df)} rows and {len(df.columns)} columns from the CSV file.")
+except Exception as e:
+    print(f"Error loading CSV file: {e}")
+    raise
+
+# Step 2: Generate the CREATE TABLE statement dynamically
+def generate_create_table_query(df, table_name):
+    """
+    Generates a SQL CREATE TABLE query based on the DataFrame schema.
+    Parameters:
+        - df: pandas DataFrame containing the data.
+        - table_name: Name of the table to be created.
+    Returns:
+        - SQL query string to create the table.
+    """
+    columns = []
+    for col, dtype in zip(df.columns, df.dtypes):
+        # Map pandas data types to PostgreSQL data types
+        if "int" in str(dtype):
+            pg_type = "NUMERIC"
+        elif "float" in str(dtype):
+            pg_type = "FLOAT"
+        elif "datetime" in str(dtype):
+            pg_type = "TIMESTAMP"
+        else:
+            pg_type = "TEXT"  # Default to TEXT for other types
+        columns.append(f"{col} {pg_type}")
+    
+    # Combine all column definitions into a CREATE TABLE query
+    columns_sql = ", ".join(columns)
+    create_table_query = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql});"
+    return create_table_query
+
+# Generate the CREATE TABLE query
+create_table_query = generate_create_table_query(df, TABLE_NAME)
+
+# Step 3: Connect to PostgreSQL and create the table
+try:
+    print("Connecting to the PostgreSQL database...")
+    conn = psycopg2.connect(
+        host=DB_HOST,
+        port=DB_PORT,
+        dbname=DB_NAME,
+        user=DB_USER,
+        password=DB_PASSWORD,
+    )
+    cursor = conn.cursor()
+
+    # Execute the CREATE TABLE query
+    print(f"Creating table: {TABLE_NAME}")
+    cursor.execute(create_table_query)
+    conn.commit()
+    print(f"Table {TABLE_NAME} created successfully.")
+
+    # Step 4: Insert data into the table
+    print("Preparing to insert data into the table...")
+    # Generate the INSERT INTO statement dynamically
+    columns = ",".join(df.columns)
+    placeholders = ",".join(["%s"] * len(df.columns))
+    insert_query = sql.SQL(
+        f"INSERT INTO {TABLE_NAME} ({columns}) VALUES ({placeholders})"
+    )
+    
+    # Insert rows in batches
+    batch_size = int(os.getenv("BATCH_SIZE", 10000))  # Batch size can be adjusted via environment variable
+    for i in range(0, len(df), batch_size):
+        batch = df.iloc[i : i + batch_size]
+        cursor.executemany(insert_query, batch.values.tolist())
+        conn.commit()
+        print(f"Inserted rows {i + 1} to {i + len(batch)}.")
+    
+    print("Data insertion completed successfully.")
+except Exception as e:
+    print(f"An error occurred: {e}")
+    print("Detailed traceback:")
+    print(traceback.format_exc())  # Print full traceback for debugging
+finally:
+    # Ensure resources are closed properly
+    if 'cursor' in locals() and cursor is not None:
+        cursor.close()
+    if 'conn' in locals() and conn is not None:
+        conn.close()
+    print("Database connection closed.")
+```

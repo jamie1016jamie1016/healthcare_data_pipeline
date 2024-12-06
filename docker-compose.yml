@@ -1,80 +1,3 @@
-# version: '3.9'  # Use a recent Compose file version
-# services:
-#   postgres:
-#     image: postgres:13
-#     environment:
-#       - POSTGRES_USER=airflow
-#       - POSTGRES_PASSWORD=airflow
-#       - POSTGRES_DB=airflow
-#     ports:
-#       - "5432:5432"
-#     healthcheck:
-#       test: ["CMD-SHELL", "pg_isready -U airflow"]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-
-#   airflow-init:
-#     image: apache/airflow:2.10.3
-#     environment:
-#       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-#       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-#       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-#       - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOofyDDAmhZ37Si56s9PJVMBlAZJABtig=
-#     entrypoint: "bash -c 'airflow db init && airflow users create --username admin --password admin --firstname Admin --lastname Admin --role Admin --email admin@example.com'"
-#     depends_on:
-#       postgres:
-#         condition: service_healthy
-
-#   airflow-webserver:
-#     image: apache/airflow:2.10.3
-#     environment:
-#       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-#       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-#       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-#       # change the below line to your host machine's IP address, username and password
-#       # AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://YOUR_USERNAME:YOUR_PASSWARD@host.docker.internal:5432/cms_staging_db
-#       - AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://postgres:asd456@host.docker.internal:5432/cms_staging_db
-#       - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOofyDDAmhZ37Si56s9PJVMBlAZJABtig=
-#     ports:
-#       - "8080:8080"
-#     command: "airflow webserver"
-#     depends_on:
-#       postgres:
-#         condition: service_healthy
-#     volumes:
-#     # change the below line to your local machine's path
-#       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/dags:/opt/airflow/dags
-#       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/logs:/opt/airflow/logs
-#       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/scripts:/opt/airflow/scripts 
-#     healthcheck:
-#       test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-#       interval: 10s
-#       timeout: 5s
-#       retries: 5
-
-#   airflow-scheduler:
-#     image: apache/airflow:2.10.3
-#     environment:
-#       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
-#       # change the below line to your host machine's IP address, username and password
-#       # AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://YOUR_USERNAME:YOUR_PASSWARD@host.docker.internal:5432/cms_staging_db
-#       - AIRFLOW__EXTRA__DB_CONN=postgresql+psycopg2://postgres:asd456@host.docker.internal:5432/cms_staging_db
-#       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-#       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-#       - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOofyDDAmhZ37Si56s9PJVMBlAZJABtig=
-#     command: "airflow scheduler"
-#     depends_on:
-#       airflow-webserver:
-#         condition: service_healthy
-#     volumes:
-#       # change the below line to your local machine's path
-#       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/dags:/opt/airflow/dags
-#       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/logs:/opt/airflow/logs
-#       - /Users/jamie/Documents/my_code/cms_health_data_pipeline/scripts:/opt/airflow/scripts
- 
-############################################################################################################
-
 version: '3.9'
 services:
   postgres:
@@ -102,6 +25,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+    env_file: 
+      - .env
 
   airflow-webserver:
     image: apache/airflow:2.10.3
@@ -111,6 +36,10 @@ services:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       - AIRFLOW__EXTRA__DB_CONN=${EXTRA_DB_CONN}
       - AIRFLOW__CORE__FERNET_KEY=${FERNET_KEY}
+      - AIRFLOW_OUTPUT_DIR=${AIRFLOW_OUTPUT_DIR}
+      - CSV_DELIMITER=${CSV_DELIMITER}
+    env_file: 
+      - .env
     ports:
       - "8080:8080"
     command: "airflow webserver"
@@ -129,6 +58,8 @@ services:
 
   airflow-scheduler:
     image: apache/airflow:2.10.3
+    env_file: 
+      - .env
     environment:
       - AIRFLOW__CORE__SQL_ALCHEMY_CONN=postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres/${POSTGRES_DB}
       - AIRFLOW__EXTRA__DB_CONN=${EXTRA_DB_CONN}
@@ -143,3 +74,5 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ./scripts:/opt/airflow/scripts
+
+

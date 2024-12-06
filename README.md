@@ -92,8 +92,17 @@ docker --version
 ```
 
 ### **3. Start Docker Services**
-Ensure to change my path to your path in docker-compose.yml file 
-Run the following command to start the containers:
+
+⚠ **Warning**:  
+Before running the following command, ensure you have created a `.env` file based on the provided `example_env.txt` file. The `.env` file is required to configure your environment variables.
+
+#### Steps to Create the `.env` File:
+1. Open the `example_env.txt` file in a text editor.
+2. Copy its content and save it as a new file named `.env` in the same directory as `docker-compose.yml`.
+3. Update the values in `.env` as needed.
+
+Once the `.env` file is ready, you can start the Docker containers by running:
+
 ```bash
 docker-compose up
 ```
