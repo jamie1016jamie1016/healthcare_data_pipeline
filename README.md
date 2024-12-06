@@ -81,7 +81,7 @@ cms_health_data_pipeline/
 
 ### **1. Clone the Repository**
 ```bash
-git clone https://github.com/your-username/cms_health_data_pipeline.git
+git clone https://github.com/jamie1016jamie1016/healthcare_data_pipeline.git
 cd cms_health_data_pipeline
 ```
 

@@ -4,3 +4,4 @@ dags/processed_outpatient.csv
 scripts/db_connection.py
 scripts/__pycache__
 .env
+README.Rmd
